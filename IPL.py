@@ -50,9 +50,9 @@ balls_faced = balls_faced.groupby(['match_id', 'inning', 'batsman'])['batsman_ru
 balls_faced.columns = ['match_id', 'inning', 'batsman', 'balls_faced']
 batsmen = pd.merge(balls_faced, batsmen, left_on=['match_id', 'inning', 'batsman'], 
                         right_on=['match_id', 'inning', 'batsman'], how='left')
-Total_balls = pd.concat(batsmen, balls_faced, left_on = 'batsman', right_on = 'balls_faced', how = 'outer')
-column1 = ['batsman', 'Total']
-Total_balls = Total_balls[column1]
+
+Total_balls = balls_faced.groupby(['batsman'])['balls_faced'].sum().sort_values(ascending = False)
+Total_balls = Total_balls.reset_index()
 
 fours = deliveries[deliveries['batsman_runs'] == 4]
 sixes = deliveries[deliveries['batsman_runs'] == 6]
@@ -115,6 +115,7 @@ bowlers = matches[['id','season']].merge(bowlers, left_on = 'id', right_on = 'ma
 
 Total_runs = batsmen.groupby(['batsman'])['batsman_runs'].sum()
 Total_runs = Total_runs.sort_values( ascending = False)
+Total_runs = Total_runs.reset_index()
 
 Total_wickets = bowlers.groupby(['bowler'])['wickets'].sum()
 Total_wickets = Total_wickets.sort_values(ascending = False)
@@ -126,9 +127,10 @@ Total_matches.rename(columns = {'inning':'Tot_matches'}, inplace = True)
 print(Total_matches)
 
 
-Total_balls = balls_faced.groupby(['batsman','balls_faced'])
-#Overall_SR = Total_balls.groupby(['Total_balls'])
-#Overall_SR['Avg_SR'] = (Overall_SR['SR']/Overall_SR['matches'])
-#Overall_SR.sort_values(by = 'Avg_SR', ascending = False)
+Total_Sr = pd.merge(Total_runs, Total_balls, left_on = 'batsman', right_on = 'batsman', how = 'left')
+Total_Sr['Avg_Sr'] = (Total_Sr['batsman_runs']/Total_Sr['balls_faced'])*100
+Total_Sr = Total_Sr.sort_values(by = 'Avg_Sr', ascending = False)
 
-#Overall_SR = batsmen.groupby(['batsman'])['SR'].apply(np.mean).sort_values(ascending = False)
+# MAIN PARAMETERS
+Final_Batsmen_Parameters = pd.merge(Total_Sr, Total_runs, left_on = ['batsman','batsman_runs'], right_on = ['batsman','batsman_runs'], how = 'left')
+
