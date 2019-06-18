@@ -111,7 +111,7 @@ bowlers = bowlers_over.merge(bowlers, on=["match_id", "inning", "bowling_team", 
 bowlers['Econ'] = np.round(bowlers['runs'] / bowlers['over'] , 2)
 bowlers = matches[['id','season']].merge(bowlers, left_on = 'id', right_on = 'match_id', how = 'left').drop('id', axis = 1)
 
-#Combining data
+#Combining data for batsmen
 
 Total_runs = batsmen.groupby(['batsman'])['batsman_runs'].sum()
 Total_runs = Total_runs.sort_values( ascending = False)
@@ -131,6 +131,25 @@ Total_Sr = pd.merge(Total_runs, Total_balls, left_on = 'batsman', right_on = 'ba
 Total_Sr['Avg_Sr'] = (Total_Sr['batsman_runs']/Total_Sr['balls_faced'])*100
 Total_Sr = Total_Sr.sort_values(by = 'Avg_Sr', ascending = False)
 
-# MAIN PARAMETERS
+Total_4s = batsmen.groupby(['batsman'])['4s'].sum().reset_index()
+Total_6s = batsmen.groupby(['batsman'])['6s'].sum().reset_index()
+
+Total_NO = batsmen.groupby(['batsman'])['dismissal_kind'].count().reset_index()
+Total_NO = Total_matches[['batsman','Tot_matches']].merge(Total_NO, left_on = 'batsman', right_on = 'batsman', how = 'left')
+Total_NO['Total_NO'] = Total_NO['Tot_matches']-Total_NO['dismissal_kind']
+
+# MAIN PARAMETERS FOR BATSMEN
+
 Final_Batsmen_Parameters = pd.merge(Total_Sr, Total_runs, left_on = ['batsman','batsman_runs'], right_on = ['batsman','batsman_runs'], how = 'left')
+Final_Batsmen_Parameters = Total_4s[['batsman','4s']].merge(Final_Batsmen_Parameters, left_on = 'batsman', right_on = 'batsman', how = 'left')
+Final_Batsmen_Parameters = Total_6s[['batsman','6s']].merge(Final_Batsmen_Parameters, left_on = 'batsman', right_on = 'batsman', how = 'left')
+Final_Batsmen_Parameters = Total_NO[['batsman', 'Tot_matches','Total_NO','dismissal_kind']].merge(Final_Batsmen_Parameters, left_on = 'batsman', right_on = 'batsman', how = 'left')
+
+Final_Batsmen_Parameters['Hard_Hitter'] = (Final_Batsmen_Parameters['4s']*Final_Batsmen_Parameters['6s'])/Final_Batsmen_Parameters['balls_faced']
+Final_Batsmen_Parameters['Finisher'] = Final_Batsmen_Parameters['Total_NO']/Final_Batsmen_Parameters['Tot_matches']
+Final_Batsmen_Parameters['Fast_Scorer'] = Final_Batsmen_Parameters['batsman_runs']/Final_Batsmen_Parameters['balls_faced']
+Final_Batsmen_Parameters['Consistent'] = Final_Batsmen_Parameters['batsman_runs']/Final_Batsmen_Parameters['dismissal_kind']
+Final_Batsmen_Parameters['Running'] = (Final_Batsmen_Parameters['batsman_runs']-(Final_Batsmen_Parameters['4s']+Final_Batsmen_Parameters['6s']))/(Final_Batsmen_Parameters['balls_faced']-(Final_Batsmen_Parameters['4s']+Final_Batsmen_Parameters['6s']))
+
+
 
