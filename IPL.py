@@ -111,14 +111,17 @@ bowlers = bowlers_over.merge(bowlers, on=["match_id", "inning", "bowling_team", 
 bowlers['Econ'] = np.round(bowlers['runs'] / bowlers['over'] , 2)
 bowlers = matches[['id','season']].merge(bowlers, left_on = 'id', right_on = 'match_id', how = 'left').drop('id', axis = 1)
 
+
+bowlers['inning'] = bowlers['inning'].replace(to_replace = 2, value = 1)
+
 #Combining data for batsmen
 
 Total_runs = batsmen.groupby(['batsman'])['batsman_runs'].sum()
 Total_runs = Total_runs.sort_values( ascending = False)
 Total_runs = Total_runs.reset_index()
 
-Total_wickets = bowlers.groupby(['bowler'])['wickets'].sum()
-Total_wickets = Total_wickets.sort_values(ascending = False)
+Total_wickets = bowlers.groupby(['bowler'])['wickets'].sum().reset_index()
+#Total_wickets = Total_wickets.sort_values(ascending = False)
 #print(Total_wickets)
 
 Total_matches = batsmen.groupby(['batsman'])['inning'].sum().reset_index()
@@ -138,6 +141,18 @@ Total_NO = batsmen.groupby(['batsman'])['dismissal_kind'].count().reset_index()
 Total_NO = Total_matches[['batsman','Tot_matches']].merge(Total_NO, left_on = 'batsman', right_on = 'batsman', how = 'left')
 Total_NO['Total_NO'] = Total_NO['Tot_matches']-Total_NO['dismissal_kind']
 
+#Combining data for bowlers
+
+Total_Runs_Conceded = bowlers.groupby(['bowler'])['runs'].sum().reset_index()
+Total_Overs_bowled = bowlers.groupby(['bowler'])['over'].sum().reset_index()
+Total_Overs_bowled['Balls_bowled'] = Total_Overs_bowled['over']*6
+
+Total_BigWicket = bowlers.loc[:,['bowler','wickets']]
+Total_BigWicket = pd.crosstab(Total_BigWicket.bowler, Total_BigWicket.wickets).reset_index()
+Total_BigWicket['Big_Wickets'] = Total_BigWicket[4]+Total_BigWicket[5]+Total_BigWicket[6]
+
+Total_Bowler_innings = bowlers.groupby(['bowler'])['inning'].sum().reset_index()
+
 # MAIN PARAMETERS FOR BATSMEN
 
 Final_Batsmen_Parameters = pd.merge(Total_Sr, Total_runs, left_on = ['batsman','batsman_runs'], right_on = ['batsman','batsman_runs'], how = 'left')
@@ -151,5 +166,17 @@ Final_Batsmen_Parameters['Fast_Scorer'] = Final_Batsmen_Parameters['batsman_runs
 Final_Batsmen_Parameters['Consistent'] = Final_Batsmen_Parameters['batsman_runs']/Final_Batsmen_Parameters['dismissal_kind']
 Final_Batsmen_Parameters['Running'] = (Final_Batsmen_Parameters['batsman_runs']-(Final_Batsmen_Parameters['4s']+Final_Batsmen_Parameters['6s']))/(Final_Batsmen_Parameters['balls_faced']-(Final_Batsmen_Parameters['4s']+Final_Batsmen_Parameters['6s']))
 
+# MAIN PARAMETERS FOR BOWLERS
+
+Final_Bowler_Parameters = pd.merge(Total_Runs_Conceded, Total_Overs_bowled, left_on = ['bowler'], right_on = ['bowler'], how = 'left')
+Final_Bowler_Parameters = Total_wickets.merge(Final_Bowler_Parameters, left_on = 'bowler', right_on = 'bowler', how = 'left')
+Final_Bowler_Parameters = Total_BigWicket[['bowler', 4, 5, 6,'Big_Wickets']].merge(Final_Bowler_Parameters, left_on = 'bowler', right_on = 'bowler', how = 'left')
+Final_Bowler_Parameters = Total_Bowler_innings[['bowler','inning']].merge(Final_Bowler_Parameters, left_on = 'bowler', right_on = 'bowler', how = 'left')
+
+Final_Bowler_Parameters['Economy'] = Final_Bowler_Parameters['runs']/Final_Bowler_Parameters['over']
+Final_Bowler_Parameters['Wicket_Taker'] = Final_Bowler_Parameters['Balls_bowled']/Final_Bowler_Parameters['wickets']
+Final_Bowler_Parameters['Big_Wicket_Taker'] = Final_Bowler_Parameters['Big_Wickets']/Final_Bowler_Parameters['inning']
+Final_Bowler_Parameters['consistent'] = Final_Bowler_Parameters['runs']/Final_Bowler_Parameters['wickets']
+Final_Bowler_Parameters['Short_Performance'] = (Final_Bowler_Parameters['wickets']-4*Final_Bowler_Parameters[4]-5*Final_Bowler_Parameters[5]-6*Final_Bowler_Parameters[6])/(Final_Bowler_Parameters['inning']-Final_Bowler_Parameters['Big_Wickets'])
 
 
